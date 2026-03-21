@@ -1,9 +1,13 @@
 from supabase import create_client
+from dotenv import load_dotenv
+import os
 
-url = "https://hpnqkbxawzmmejtqkcbk.supabase.co"
-key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwbnFrYnhhd3ptbWVqdHFrY2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMjQzNDIsImV4cCI6MjA4OTcwMDM0Mn0.-eoQAbBQGuHKly7ofugG2ZXFEvN4qJ3Tosx5O0F1jUo"
+load_dotenv()
 
-supabase = create_client(url, key)
+supabase = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_KEY")
+)
 
 TABLE = "pharmacare_formulary"
 COLS  = '"DIN/PIN", "Brand Nm", "Generic Nm", "Pcare Plan Desc"'
