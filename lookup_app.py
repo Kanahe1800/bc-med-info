@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+from backend.search_med import search
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -406,28 +407,31 @@ st.markdown("<hr class='divider'>", unsafe_allow_html=True)
 
 # ── Results ────────────────────────────────────────────────────────────────────
 if search and query.strip():
-    with st.spinner("Querying Health Canada DPD…"):
-        if is_din(query.strip()):
-            results = fetch_by_din(query.strip())
-        else:
-            results = fetch_by_name(query.strip().upper())
+    # with st.spinner("Querying Health Canada DPD…"):
+    #     if is_din(query.strip()):
+    #         results = fetch_by_din(query.strip())
+    #     else:
+    #         results = fetch_by_name(query.strip().upper())
 
-    if not results:
-        st.markdown(
-            f'<div class="empty-state">No results found for <b>{query}</b>.'
-            f'<br>Try a different spelling or check the DIN.</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        display = results[:10]
-        st.markdown(f"**{len(results)} result{'s' if len(results) != 1 else ''} found**")
-        render_results_table(display)
-        render_ingredients(display)
-        if len(results) > 10:
-            st.caption(
-                f"Showing first 10 of {len(results)} results. "
-                f"Narrow your search for more specific results."
-            )
+    # if not results:
+    #     st.markdown(
+    #         f'<div class="empty-state">No results found for <b>{query}</b>.'
+    #         f'<br>Try a different spelling or check the DIN.</div>',
+    #         unsafe_allow_html=True,
+    #     )
+    # else:
+    #     display = results[:10]
+    #     st.markdown(f"**{len(results)} result{'s' if len(results) != 1 else ''} found**")
+    #     render_results_table(display)
+    #     render_ingredients(display)
+    #     if len(results) > 10:
+    #         st.caption(
+    #             f"Showing first 10 of {len(results)} results. "
+    #             f"Narrow your search for more specific results."
+    #         )
+    st.markdown(query)
+    st.markdown(type(query))
+    search(query)
 
 elif search and not query.strip():
     st.warning("Please enter a search term.")

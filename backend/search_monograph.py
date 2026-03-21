@@ -64,10 +64,13 @@ def din_to_monograph(din: str) -> dict:
     }
 
 
-result = din_to_monograph("02549883")
-print(result["din"])
-print(result["drug_code"])
-print(result["pdf_url"])
-summary = summarize_monograph(result["pdf_url"])
-print(summary)
-print(f"PDF size: {len(result['pdf_b64'])} chars (base64)")
+# result = din_to_monograph("02549883")
+
+# print(result["din"])
+# print(result["drug_code"])
+# print(result["pdf_url"])
+
+
+# summary = summarize_monograph(result["pdf_url"])
+# print(summary)
+# print(f"PDF size: {len(result['pdf_b64'])} chars (base64)")

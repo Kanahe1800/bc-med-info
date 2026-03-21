@@ -37,11 +37,13 @@ def top_matches(rows, query, field, n=3):
 
 # ── Display ────────────────────────────────────────────────────────────────────
 
-def print_results(rows, matched_on, top=False):
+def print_results(rows, matched_on, dictionary, top=False, prnt=False):
     label = f"  Top {len(rows)} match(es)" if top else f"  {len(rows)} result(s) found"
-    print(f"\n  Matched on: {matched_on}")
-    print(f"\n  {'DIN/PIN':<12} {'Brand Name':<35} {'Generic Name':<35} {'Coverage'}")
-    print("  " + "─" * 105)
+    if prnt:
+        print(f"\n  Matched on: {matched_on}")
+        print(f"\n  {'DIN/PIN':<12} {'Brand Name':<35} {'Generic Name':<35} {'Coverage'}")
+        print("  " + "─" * 105)
+    index = 0
     for r in rows:
         din      = r.get("DIN/PIN")         or "—"
         brand    = r.get("Brand Nm")        or "—"
@@ -49,20 +51,34 @@ def print_results(rows, matched_on, top=False):
         coverage = r.get("Pcare Plan Desc") or "—"
         brand   = brand[:33]   + ".." if len(brand)   > 35 else brand
         generic = generic[:33] + ".." if len(generic) > 35 else generic
-        print(f"  {din:<12} {brand:<35} {generic:<35} {coverage}")
-    print(f"\n{label}.\n")
+        
+        if prnt:
+            print(f"  {din:<12} {brand:<35} {generic:<35} {coverage}")
+        
+        dictionary["DIN"][index] = din
+        dictionary["Generic Name"][index] = generic
+        dictionary["Brand Name"][index] = brand
+        dictionary["coverage"][index] = coverage
+        
+        index += 1
+        
+    if prnt:
+        print(f"\n{label}.\n")
+    
+    return dictionary
 
 
 # ── Waterfall search ───────────────────────────────────────────────────────────
 
-def search(query: str):
+def search(query: str, prnt=False):
+    results = {"DIN": [""], "Generic Name": [""], "Brand Name": [""], "coverage": [""]}
+    
     q = query.strip()
 
     # 1. Try exact DIN match
     res = supabase.table(TABLE).select(COLS).eq('"DIN/PIN"', q).execute()
     if res.data:
-        print_results(res.data, matched_on="DIN/PIN (exact)")
-        return
+        return print_results(res.data, matched_on="DIN/PIN (exact)", dictionary=results, prnt=prnt)
 
     # 2. Try Generic Name — all words, then broaden
     words = q.split()
@@ -79,8 +95,7 @@ def search(query: str):
 
     best_generic = top_matches(gres.data, q, "Generic Nm", n=3)
     if best_generic:
-        print_results(best_generic, matched_on="Generic Name", top=True)
-        return
+        return print_results(best_generic, matched_on="Generic Name", dictionary=results, top=True, prnt=prnt)
 
     # 3. Try Brand Name — all words, then broaden
     bquery = supabase.table(TABLE).select(COLS)
@@ -95,11 +110,11 @@ def search(query: str):
 
     best_brand = top_matches(bres.data, q, "Brand Nm", n=3)
     if best_brand:
-        print_results(best_brand, matched_on="Brand Name", top=True)
-        return
+        return print_results(best_brand, matched_on="Brand Name", dictionary=results, top=True, prnt=prnt)
 
     # 4. Nothing found
     print("\n  No results found for that DIN, Generic Name, or Brand Name.\n")
+    return results
 
 
 # ── Menu ───────────────────────────────────────────────────────────────────────

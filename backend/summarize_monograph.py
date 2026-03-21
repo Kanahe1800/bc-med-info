@@ -58,8 +58,8 @@ Do not give personalized medical advice.""",
     return response.content[0].text
 
 
-# test
-if __name__ == "__main__":
-    pdf_url = "https://pdf.hres.ca/dpd_pm/00081570.PDF"
-    summary = summarize_monograph(pdf_url)
-    print(summary)
+# # test
+# if __name__ == "__main__":
+#     pdf_url = "https://pdf.hres.ca/dpd_pm/00081570.PDF"
+#     summary = summarize_monograph(pdf_url)
+#     print(summary)
