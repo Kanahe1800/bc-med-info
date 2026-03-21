@@ -2,3 +2,5 @@ show_duplicates.py
 remove_duplicates.py
 pddf_2026_03_10.csv
 .vscode
+.env
+__pycache__
