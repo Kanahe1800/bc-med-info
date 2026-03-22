@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from backend.medical_db import final_search_din
+from backend.medical_db import final_search_din, final_monograph
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -187,11 +187,6 @@ html, body, [data-testid="stAppViewContainer"] {
 .drug-table tbody tr:last-child {
     border-bottom: none;
 }
-/* Row 2 (fetch function result) — subtle blue tint to distinguish from row 1 */
-.drug-table tbody tr.row-secondary {
-    background: #F0F6FC;
-    border-bottom: 2px solid #C5C0B5;
-}
 /* #1A2E4A on #FFFFFF → 13.1:1 (AAA) */
 .drug-table tbody td {
     padding: 10px 14px;
@@ -217,33 +212,33 @@ html, body, [data-testid="stAppViewContainer"] {
     font-size: 0.82rem;
 }
 
-/* ── Ingredients section (below table) ── */
-.ingredients-wrap {
+/* ── Monograph expander ── */
+[data-testid="stExpander"] {
     background: #FFFFFF;
-    border: 1.5px solid #C5C0B5;
-    border-radius: 10px;
-    padding: 1rem 1.2rem;
+    border: 1.5px solid #C5C0B5 !important;
+    border-radius: 10px !important;
     margin-bottom: 1.2rem;
 }
-.ingredients-wrap h4 {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #4A4A5A;
-    margin: 0 0 0.6rem 0;
-}
-/* Ingredient pill: #1A2E4A on #E6F1FB → 8.9:1 (AAA) */
-.ingredient-pill {
-    display: inline-block;
-    background: #E6F1FB;
-    border: 1px solid #8BAFD4;
-    border-radius: 4px;
-    padding: 3px 10px;
-    font-size: 0.82rem;
-    color: #1A2E4A;
-    margin: 2px 3px 2px 0;
+[data-testid="stExpander"] summary {
     font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #1A2E4A;
+    padding: 12px 16px;
+}
+.monograph-pending {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    color: #9BAABB;
+    font-style: italic;
+    padding: 4px 0 8px;
+}
+.monograph-body {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    color: #1A2E4A;
+    line-height: 1.7;
+    padding: 4px 0 8px;
 }
 
 /* ── Empty state: #4A4A5A on #F1EFE8 → 5.5:1 (AA) ── */
@@ -276,66 +271,100 @@ st.markdown('<div class="badge">Health Canada · DPD API</div>', unsafe_allow_ht
 st.markdown('<div class="hero-title">British Columbia Drug<br><i>Lookup</i></div>', unsafe_allow_html=True)
 st.markdown('<div class="hero-sub">Search Health Canada\'s Drug Product Database by brand name or DIN.</div>', unsafe_allow_html=True)
 
-# ── Handling User Input ─────────────────────────────────────────────────────────────────────────
-# User input
+# ── User input ──────────────────────────────────────────────────────────────────
 query = st.text_input("", placeholder="Generic name or DIN", label_visibility="collapsed")
 
-# Processing user input if it was a DIN 
-
+# Normalise: if the user typed a number, strip leading zeros / whitespace
 try:
-    query = int(query)
-    query = str(query)
-except ValueError:
+    query = str(int(query))
+except (ValueError, TypeError):
     pass
-
-if query:
-    search_result = final_search_din(query)
-    print(search_result)
-
-    drug_din = search_result['DIN']
-    drug_generic_name = search_result['Generic Name']
-    drug_brand_name = search_result['Brand Name']
-    drug_coverage = search_result['coverage']
-
-
-# Show auto-detect hint while the user types
-# if query.strip():
-#     if is_din(query.strip()):
-#         st.markdown('<span class="mode-chip mode-chip-din">🔢 Searching by DIN</span>', unsafe_allow_html=True)
-#     else:
-#         st.markdown('<span class="mode-chip mode-chip-name">🔤 Searching by brand name</span>', unsafe_allow_html=True)
 
 search_bt = st.button("Search →")
 
 st.markdown("<hr class='divider'>", unsafe_allow_html=True)
 
 # ── Results ────────────────────────────────────────────────────────────────────
-# if search and query.strip():
-#     with st.spinner("Querying Health Canada DPD…"):
-#         if is_din(query.strip()):
-#             results = fetch_by_din(query.strip())
-#         else:
-#             results = fetch_by_name(query.strip().upper())
+if search_bt and query:
+    # Step 1: fetch drug data and render the table immediately
+    with st.spinner("Querying databases…"):
+        search_result = final_search_din(query)
 
-#     if not results:
-#         st.markdown(
-#             f'<div class="empty-state">No results found for <b>{query}</b>.'
-#             f'<br>Try a different spelling or check the DIN.</div>',
-#             unsafe_allow_html=True,
-#         )
-#     else:
-#         display = results[:10]
-#         st.markdown(f"**{len(results)} result{'s' if len(results) != 1 else ''} found**")
-#         render_results_table(display)
-#         render_ingredients(display)
-#         if len(results) > 10:
-#             st.caption(
-#                 f"Showing first 10 of {len(results)} results. "
-#                 f"Narrow your search for more specific results."
-#             )
+    if not search_result:
+        st.markdown(
+            f'<div class="empty-state">No results found for <b>{query}</b>.'
+            f'<br>Try a different spelling or check the DIN.</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        # ── 1. Drug table ───────────────────────────────────────────────────────
+        # Each value may be a list (one entry per matched drug) or a scalar.
+        # Normalise everything to lists so we can zip them into rows.
+        def to_list(val):
+            return val if isinstance(val, list) else [val]
 
-# elif search and not query.strip():
-#     st.warning("Please enter a search term.")
+        dins          = to_list(search_result.get("DIN", "—") or "—")
+        generic_names = to_list(search_result.get("Generic Name", "—") or "—")
+        brand_names   = to_list(search_result.get("Brand Name", "—") or "—")
+        coverages     = to_list(search_result.get("coverage", "—") or "—")
+
+        # Pad shorter lists to match the longest so zip doesn't drop rows
+        max_len = max(len(dins), len(generic_names), len(brand_names), len(coverages))
+        def pad(lst, length):
+            return lst + ["—"] * (length - len(lst))
+
+        dins          = pad(dins,          max_len)
+        generic_names = pad(generic_names, max_len)
+        brand_names   = pad(brand_names,   max_len)
+        coverages     = pad(coverages,     max_len)
+
+        rows_html = ""
+        for din, generic, brand, coverage in zip(dins, generic_names, brand_names, coverages):
+            rows_html += (
+                "<tr>"
+                f'<td class="cell-din">{din}</td>'
+                f'<td>{generic}</td>'
+                f'<td>{brand}</td>'
+                f'<td>{coverage}</td>'
+                "</tr>"
+            )
+
+        st.markdown(f"""
+        <div class="drug-table-wrap">
+            <table class="drug-table">
+                <thead>
+                    <tr>
+                        <th>DIN</th>
+                        <th>Generic Name</th>
+                        <th>Brand Name</th>
+                        <th>Coverage</th>
+                    </tr>
+                </thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ── 2. Monograph summary expander (fetched after table is already visible) ──
+        with st.expander("📋  Monograph summary", expanded=False):
+            with st.spinner("Loading monograph…"):
+                summary = final_monograph(search_result)
+                print(summary)
+            if summary:
+                st.markdown(
+                    f'<div class="monograph-body">{summary}</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    '<div class="monograph-pending">'
+                    'Monograph summary not yet available for this drug.'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+
+elif search_bt and not query:
+    st.warning("Please enter a search term.")
 
 st.markdown("""
 <div class="footer-note">

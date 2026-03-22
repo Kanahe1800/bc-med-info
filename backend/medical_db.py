@@ -15,7 +15,7 @@ def final_search_din(query: str):
     
     
 def final_monograph(results: dict):
-    if len(results["DIN"]) == 1:
+    if len(results["DIN"]) >= 1:
         din = results["DIN"][0]
         # din = din.zfill(8)
         print(din)
@@ -31,11 +31,11 @@ def final_monograph(results: dict):
         return summary
         
 
-query = "02549883"
-results = final_search_din(query)
-print(results)
+# query = "02549883"
+# results = final_search_din(query)
+# print(results)
 
-monograph = final_monograph(results)
-print(monograph)
+# monograph = final_monograph(results)
+# print(monograph)
 
 

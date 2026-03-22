@@ -4,7 +4,7 @@ import base64
 import re
 import os
 from dotenv import load_dotenv
-from summarize_monograph import summarize_monograph
+from backend.summarize_monograph import summarize_monograph
 
 load_dotenv()
 
@@ -17,7 +17,7 @@ def get_drug_code(din: str) -> int | None:
         "https://health-products.canada.ca/api/drug/drugproduct/",
         params={"din": din, "lang": "en"},
         headers=HEADERS,
-        timeout=10,
+        timeout=30,
     )
     r.raise_for_status()
     data = r.json()

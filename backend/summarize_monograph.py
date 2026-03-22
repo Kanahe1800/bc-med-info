@@ -25,7 +25,7 @@ def summarize_monograph(pdf_url: str) -> str:
 
     response = claude.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=1024,
+        max_tokens=512,
         messages=[{
             "role": "user",
             "content": [
