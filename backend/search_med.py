@@ -55,6 +55,7 @@ def print_results(rows, matched_on, dictionary, top=False, prnt=False):
         if prnt:
             print(f"  {din:<12} {brand:<35} {generic:<35} {coverage}")
         
+        din = din.zfill(8)
         dictionary["DIN"].append(din)
         dictionary["Generic Name"].append(generic)
         dictionary["Brand Name"].append(brand)

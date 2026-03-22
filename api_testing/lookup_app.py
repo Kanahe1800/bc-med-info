@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
-from backend.search_med import search
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from backend.medical_db import final_search_din
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -268,173 +270,72 @@ html, body, [data-testid="stAppViewContainer"] {
 </style>
 """, unsafe_allow_html=True)
 
-BASE_URL = "https://health-products.canada.ca/api/drug"
-
-# ── API helpers ────────────────────────────────────────────────────────────────
-
-def fetch_by_name(name):
-    r = requests.get(f"{BASE_URL}/drugproduct/?brandname={name}&lang=en&type=json", timeout=10)
-    return r.json() if r.status_code == 200 else None
-
-def fetch_by_din(din):
-    r = requests.get(f"{BASE_URL}/drugproduct/?din={din}&lang=en&type=json", timeout=10)
-    return r.json() if r.status_code == 200 else None
-
-def fetch_ingredients(drug_code):
-    r = requests.get(f"{BASE_URL}/activeingredient/?id={drug_code}&lang=en&type=json", timeout=10)
-    return r.json() if r.status_code == 200 else []
-
-def fetch_schedule(drug_code):
-    r = requests.get(f"{BASE_URL}/schedule/?id={drug_code}&lang=en&type=json", timeout=10)
-    if r.status_code == 200 and r.json():
-        return ", ".join(s.get("schedule_name", "") for s in r.json())
-    return "—"
-
-def fetch_form(drug_code):
-    r = requests.get(f"{BASE_URL}/form/?id={drug_code}&lang=en&type=json", timeout=10)
-    if r.status_code == 200 and r.json():
-        return ", ".join(f.get("pharmaceutical_form_name", "") for f in r.json())
-    return "—"
-
-def is_din(query: str) -> bool:
-    """DINs are 8-digit numeric codes. Treat any all-digit input as a DIN attempt."""
-    return query.strip().isdigit()
-
-
-def render_results_table(drugs):
-    """
-    Render a table with a header row + two data rows per drug.
-
-    Row 1 — data from the original search result object.
-    Row 2 — data returned by calling fetch_by_din(din) for the DIN column
-             and fetch_by_name(brand_name) for the Name column on that same drug.
-
-    Coverage and Special Authority Needed are left blank pending future data sources.
-    """
-    rows_html = ""
-    for drug in drugs:
-        # ── Row 1: values from the search result object ──
-        din_val  = drug.get("drug_identification_number", "—")
-        name_val = drug.get("brand_name", "—")
-
-        # ── Row 2: values returned by the individual fetch functions ──
-        # fetch_by_din returns a list; take the DIN from the first match.
-        din_lookup = fetch_by_din(din_val) or []
-        row2_din   = din_lookup[0].get("drug_identification_number", "—") if din_lookup else "—"
-
-        # fetch_by_name returns a list; take the brand name from the first match.
-        name_lookup = fetch_by_name(name_val) or []
-        row2_name   = name_lookup[0].get("brand_name", "—") if name_lookup else "—"
-
-        rows_html += f"""
-        <tr>
-            <td class="cell-din">{din_val}</td>
-            <td>{name_val}</td>
-            <td class="cell-blank">—</td>
-            <td class="cell-blank">—</td>
-        </tr>
-        <tr class="row-secondary">
-            <td class="cell-din">{row2_din}</td>
-            <td>{row2_name}</td>
-            <td class="cell-blank">—</td>
-            <td class="cell-blank">—</td>
-        </tr>
-        """
-
-    st.markdown(f"""
-    <div class="drug-table-wrap">
-        <table class="drug-table">
-            <thead>
-                <tr>
-                    <th>DIN</th>
-                    <th>Name</th>
-                    <th>Coverage</th>
-                    <th>Special Authority Needed</th>
-                </tr>
-            </thead>
-            <tbody>
-                {rows_html}
-            </tbody>
-        </table>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-def render_ingredients(drugs):
-    """Render active ingredient pills for all returned drugs beneath the table."""
-    for drug in drugs:
-        drug_code = drug.get("drug_code")
-        brand     = drug.get("brand_name", "Unknown")
-        if not drug_code:
-            continue
-
-        ingredients = fetch_ingredients(drug_code)
-        if not ingredients:
-            continue
-
-        pills = "".join(
-            f'<span class="ingredient-pill">'
-            f'{i["ingredient_name"]} {i["strength"]} {i["strength_unit"]}'
-            f'</span>'
-            for i in ingredients
-        )
-        st.markdown(f"""
-        <div class="ingredients-wrap">
-            <h4>Active Ingredients — {brand}</h4>
-            {pills}
-        </div>
-        """, unsafe_allow_html=True)
-
-
 # ── UI ─────────────────────────────────────────────────────────────────────────
 
 st.markdown('<div class="badge">Health Canada · DPD API</div>', unsafe_allow_html=True)
 st.markdown('<div class="hero-title">British Columbia Drug<br><i>Lookup</i></div>', unsafe_allow_html=True)
 st.markdown('<div class="hero-sub">Search Health Canada\'s Drug Product Database by brand name or DIN.</div>', unsafe_allow_html=True)
 
+# ── Handling User Input ─────────────────────────────────────────────────────────────────────────
+# User input
 query = st.text_input("", placeholder="Generic name or DIN", label_visibility="collapsed")
 
-# Show auto-detect hint while the user types
-if query.strip():
-    if is_din(query.strip()):
-        st.markdown('<span class="mode-chip mode-chip-din">🔢 Searching by DIN</span>', unsafe_allow_html=True)
-    else:
-        st.markdown('<span class="mode-chip mode-chip-name">🔤 Searching by brand name</span>', unsafe_allow_html=True)
+# Processing user input if it was a DIN 
 
-search = st.button("Search →")
+try:
+    query = int(query)
+    query = str(query)
+except ValueError:
+    pass
+
+if query:
+    search_result = final_search_din(query)
+    print(search_result)
+
+    drug_din = search_result['DIN']
+    drug_generic_name = search_result['Generic Name']
+    drug_brand_name = search_result['Brand Name']
+    drug_coverage = search_result['coverage']
+
+
+# Show auto-detect hint while the user types
+# if query.strip():
+#     if is_din(query.strip()):
+#         st.markdown('<span class="mode-chip mode-chip-din">🔢 Searching by DIN</span>', unsafe_allow_html=True)
+#     else:
+#         st.markdown('<span class="mode-chip mode-chip-name">🔤 Searching by brand name</span>', unsafe_allow_html=True)
+
+search_bt = st.button("Search →")
 
 st.markdown("<hr class='divider'>", unsafe_allow_html=True)
 
 # ── Results ────────────────────────────────────────────────────────────────────
-if search and query.strip():
-    # with st.spinner("Querying Health Canada DPD…"):
-    #     if is_din(query.strip()):
-    #         results = fetch_by_din(query.strip())
-    #     else:
-    #         results = fetch_by_name(query.strip().upper())
+# if search and query.strip():
+#     with st.spinner("Querying Health Canada DPD…"):
+#         if is_din(query.strip()):
+#             results = fetch_by_din(query.strip())
+#         else:
+#             results = fetch_by_name(query.strip().upper())
 
-    # if not results:
-    #     st.markdown(
-    #         f'<div class="empty-state">No results found for <b>{query}</b>.'
-    #         f'<br>Try a different spelling or check the DIN.</div>',
-    #         unsafe_allow_html=True,
-    #     )
-    # else:
-    #     display = results[:10]
-    #     st.markdown(f"**{len(results)} result{'s' if len(results) != 1 else ''} found**")
-    #     render_results_table(display)
-    #     render_ingredients(display)
-    #     if len(results) > 10:
-    #         st.caption(
-    #             f"Showing first 10 of {len(results)} results. "
-    #             f"Narrow your search for more specific results."
-    #         )
-    st.markdown(query)
-    st.markdown(type(query))
-    search(query)
+#     if not results:
+#         st.markdown(
+#             f'<div class="empty-state">No results found for <b>{query}</b>.'
+#             f'<br>Try a different spelling or check the DIN.</div>',
+#             unsafe_allow_html=True,
+#         )
+#     else:
+#         display = results[:10]
+#         st.markdown(f"**{len(results)} result{'s' if len(results) != 1 else ''} found**")
+#         render_results_table(display)
+#         render_ingredients(display)
+#         if len(results) > 10:
+#             st.caption(
+#                 f"Showing first 10 of {len(results)} results. "
+#                 f"Narrow your search for more specific results."
+#             )
 
-elif search and not query.strip():
-    st.warning("Please enter a search term.")
+# elif search and not query.strip():
+#     st.warning("Please enter a search term.")
 
 st.markdown("""
 <div class="footer-note">
