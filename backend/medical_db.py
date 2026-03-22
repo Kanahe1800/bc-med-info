@@ -7,7 +7,7 @@ def final_search_din(query: str):
     try:
         trimmed_query = str(int(query))
         results = search(trimmed_query)
-    except Exception:
+    except ValueError:
         results = search(query)
         
     # print(results)
@@ -28,7 +28,7 @@ def final_monograph(results: dict):
         return summary
         
 
-query = "00000019"
+query = "Ibuprofen"
 results = final_search_din(query)
 print(results)
 
