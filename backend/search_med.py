@@ -43,7 +43,7 @@ def print_results(rows, matched_on, dictionary, top=False, prnt=False):
         print(f"\n  Matched on: {matched_on}")
         print(f"\n  {'DIN/PIN':<12} {'Brand Name':<35} {'Generic Name':<35} {'Coverage'}")
         print("  " + "─" * 105)
-    index = 0
+    # index = 0
     for r in rows:
         din      = r.get("DIN/PIN")         or "—"
         brand    = r.get("Brand Nm")        or "—"
@@ -55,12 +55,12 @@ def print_results(rows, matched_on, dictionary, top=False, prnt=False):
         if prnt:
             print(f"  {din:<12} {brand:<35} {generic:<35} {coverage}")
         
-        dictionary["DIN"][index] = din
-        dictionary["Generic Name"][index] = generic
-        dictionary["Brand Name"][index] = brand
-        dictionary["coverage"][index] = coverage
+        dictionary["DIN"].append(din)
+        dictionary["Generic Name"].append(generic)
+        dictionary["Brand Name"].append(brand)
+        dictionary["coverage"].append(coverage)
         
-        index += 1
+        # index += 1
         
     if prnt:
         print(f"\n{label}.\n")
@@ -71,7 +71,7 @@ def print_results(rows, matched_on, dictionary, top=False, prnt=False):
 # ── Waterfall search ───────────────────────────────────────────────────────────
 
 def search(query: str, prnt=False):
-    results = {"DIN": [""], "Generic Name": [""], "Brand Name": [""], "coverage": [""]}
+    results = {"DIN": [], "Generic Name": [], "Brand Name": [], "coverage": []}
     
     q = query.strip()
 
