@@ -2,6 +2,8 @@
 
 A simple application designed to help British Columbia residents determine whether specific prescription drugs are covered under BC health plans while also providing concise, reliable drug information sourced from Canadian government data.
 
+https://github.com/user-attachments/assets/b4a50620-9c57-4cff-99a3-8558562a9437
+
 # Overview
 
 Healthcare information online is often fragmented and difficult to navigate. Our project aims to make reliable drug information more accessible by combining:
